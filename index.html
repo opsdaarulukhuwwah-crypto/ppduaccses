@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presensi Cloud - Daarul Ukhuwwah</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <!-- Library Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg: #fff7ed; --fg: #431407; --accent: #ea580c; --accent-light: #fb923c;
+            --accent-dark: #c2410c; --card: #ffffff; --border: rgba(234, 88, 12, 0.2);
+        }
+        * { box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--bg); color: var(--fg); min-height: 100vh; position: relative; }
+        .font-amiri { font-family: 'Amiri', serif; }
+        .bg-pattern { background-image: radial-gradient(circle at 10% 20%, rgba(251, 146, 60, 0.15) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(234, 88, 12, 0.1) 0%, transparent 40%); }
+        .islamic-pattern { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; opacity: 0.06; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='%23ea580c' fill-rule='evenodd'%3E%3Cpath d='M40 0L0 40l40 40 40-40L40 0zm0 10l30 30-30 30-30-30 30-30z'/%3E%3Cpath d='M40 20l20 20-20 20-20-20 20-20z'/%3E%3C/g%3E%3C/svg%3E"); }
+        .glass-card { background: var(--card); border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(234, 88, 12, 0.08); }
+        .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: white; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(234, 88, 12, 0.3); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(234, 88, 12, 0.4); }
+        .btn-secondary { background: white; color: var(--accent); border: 2px solid var(--accent); transition: all 0.3s ease; }
+        .btn-secondary:hover { background: var(--accent); color: white; }
+        .status-hadir { background: linear-gradient(135deg, #16a34a, #22c55e); color: white; }
+        .status-izin { background: linear-gradient(135deg, #2563eb, #3b82f6); color: white; }
+        .status-sakit { background: linear-gradient(135deg, #9333ea, #a855f7); color: white; }
+        .status-alpa { background: linear-gradient(135deg, #dc2626, #ef4444); color: white; }
+        .nav-tab { position: relative; transition: all 0.3s ease; color: #333; }
+        .nav-tab::after { content: ''; position: absolute; bottom: -2px; left: 50%; width: 0; height: 3px; background: var(--accent); transition: all 0.3s ease; transform: translateX(-50%); border-radius: 2px; }
+        .nav-tab.active::after, .nav-tab:hover::after { width: 100%; }
+        .nav-tab.active { color: var(--accent); font-weight: 600; }
+        .fade-in { animation: fadeIn 0.5s ease forwards; }
+        .slide-up { animation: slideUp 0.6s ease forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .class-card { transition: all 0.3s ease; background: white; }
+        .class-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(234, 88, 12, 0.15); border-color: var(--accent); }
+        .attendance-btn { transition: all 0.2s ease; font-size: 0.75rem; padding: 0.35rem 0.75rem; border-radius: 6px; border: 1px solid #e5e7eb; }
+        .attendance-btn:hover { transform: scale(1.05); }
+        .attendance-btn.active { box-shadow: 0 0 0 2px white, 0 0 0 4px var(--accent); }
+        .schedule-tag { display: inline-flex; align-items: center; gap: 0.5rem; background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+        input, select { background: white; border: 1px solid #fed7aa; color: var(--fg); transition: all 0.2s ease; }
+        input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.15); }
+        .progress-bar { background: linear-gradient(90deg, var(--accent-light), var(--accent)); transition: width 0.8s ease; }
+        .scrollbar-custom::-webkit-scrollbar { width: 6px; height: 6px; }
+        .scrollbar-custom::-webkit-scrollbar-track { background: #fff7ed; }
+        .scrollbar-custom::-webkit-scrollbar-thumb { background: var(--accent-light); border-radius: 3px; }
+        .table-row { transition: background 0.2s ease; }
+        .table-row:hover { background: #fff7ed; }
+        .modal-overlay { background: rgba(67, 20, 7, 0.5); backdrop-filter: blur(4px); }
+        .pulse-dot { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.1); } }
+        .floating { animation: float 6s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+        .header-white { background: #ffffff; border-bottom: 1px solid rgba(234, 88, 12, 0.2); box-shadow: 0 2px 10px rgba(234, 88, 12, 0.05); }
+        .stat-card { position: relative; overflow: hidden; }
+        #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.3s ease; }
+        .spinner { width: 50px; height: 50px; border: 4px solid rgba(234, 88, 12, 0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .google-btn { display: flex; align-items: center; justify-content: center; gap: 12px; background: white; border: 1px solid #ddd; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .google-btn:hover { background: #f9f9f9; }
+    </style>
+</head>
+<body class="bg-pattern">
+    <div id="loadingOverlay">
+        <div class="spinner mb-4"></div>
+        <p class="text-orange-600 font-medium">Memuat Aplikasi...</p>
+    </div>
+
+    <!-- Login Screen -->
+    <div id="loginScreen" class="hidden fixed inset-0 z-50 flex items-center justify-center" style="background: rgba(255,255,255,0.95);">
+        <div class="text-center p-8 glass-card rounded-2xl shadow-xl max-w-md w-full fade-in border-t-4 border-orange-500">
+            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-orange-100 flex items-center justify-center">
+                <svg class="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">Sistem Presensi Cloud</h2>
+            <p class="text-gray-500 mb-6 text-sm">Pondok Pesantren Daarul Ukhuwwah<br>Login dengan Akun Google.</p>
+            
+            <button onclick="loginWithGoogle()" class="google-btn w-full">
+                <svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/></svg>
+                <span>Login dengan Google</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="islamic-pattern"></div>
+    <div class="relative z-10 min-h-screen">
+        <header class="header-white sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center floating shadow-md">
+                            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                        </div>
+                        <div>
+                            <h1 class="font-amiri text-xl md:text-2xl font-bold text-orange-600">Pondok Pesantren Daarul Ukhuwwah</h1>
+                            <p class="text-xs md:text-sm text-gray-500">Sistem Presensi Cloud (GitHub Pages)</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="hidden md:flex items-center gap-2 text-sm text-gray-500"><div class="w-2 h-2 rounded-full bg-green-500 pulse-dot"></div><span id="currentDate"></span></div>
+                        <div id="userInfo" class="hidden items-center gap-3">
+                            <div class="text-right hidden sm:block">
+                                <p class="text-sm font-semibold text-gray-700" id="userName">User</p>
+                                <button onclick="logout()" class="text-xs text-red-500 hover:underline">Logout</button>
+                            </div>
+                            <img id="userPhoto" class="w-9 h-9 rounded-full border-2 border-orange-200 shadow-sm" referrerpolicy="no-referrer">
+                        </div>
+                    </div>
+                </div>
+                <nav class="mt-4 flex gap-1 md:gap-4 overflow-x-auto scrollbar-custom pb-2">
+                    <button onclick="showSection('dashboard')" class="nav-tab active px-3 md:px-4 py-2 text-sm font-medium whitespace-nowrap" data-section="dashboard">Dashboard</button>
+                    <button onclick="showSection('presensi')" class="nav-tab px-3 md:px-4 py-2 text-sm font-medium whitespace-nowrap" data-section="presensi">Input Presensi</button>
+                    <button onclick="showSection('ustadz')" class="nav-tab px-3 md:px-4 py-2 text-sm font-medium whitespace-nowrap" data-section="ustadz">Data Ustadz</button>
+                    <button onclick="showSection('rekap')" class="nav-tab px-3 md:px-4 py-2 text-sm font-medium whitespace-nowrap" data-section="rekap">Rekap Laporan</button>
+                    <button onclick="showSection('pengaturan')" class="nav-tab px-3 md:px-4 py-2 text-sm font-medium whitespace-nowrap" data-section="pengaturan">Pengaturan</button>
+                </nav>
+            </div>
+        </header>
+
+        <main class="max-w-7xl mx-auto px-4 py-6">
+            <!-- Dashboard Section -->
+            <section id="section-dashboard" class="space-y-6 fade-in">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="glass-card stat-card rounded-2xl p-4 slide-up"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl status-hadir flex items-center justify-center shadow-md"><svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div><div><p class="text-2xl font-bold text-green-600" id="statHadir">0</p><p class="text-xs text-gray-500">Hadir</p></div></div></div>
+                    <div class="glass-card stat-card rounded-2xl p-4 slide-up"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl status-izin flex items-center justify-center shadow-md"><svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></div><div><p class="text-2xl font-bold text-blue-600" id="statIzin">0</p><p class="text-xs text-gray-500">Izin</p></div></div></div>
+                    <div class="glass-card stat-card rounded-2xl p-4 slide-up"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl status-sakit flex items-center justify-center shadow-md"><svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg></div><div><p class="text-2xl font-bold text-purple-600" id="statSakit">0</p><p class="text-xs text-gray-500">Sakit</p></div></div></div>
+                    <div class="glass-card stat-card rounded-2xl p-4 slide-up"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl status-alpa flex items-center justify-center shadow-md"><svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></div><div><p class="text-2xl font-bold text-red-600" id="statAlpa">0</p><p class="text-xs text-gray-500">Alpa</p></div></div></div>
+                </div>
+                <div class="glass-card rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4"><h2 class="font-amiri text-xl font-bold text-orange-600">Rekap Hari Ini</h2><select id="dashboardClassFilter" onchange="updateDashboard()" class="text-sm rounded-lg px-3 py-2 border-orange-200"><option value="all">Semua Kelas</option></select></div>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div><p class="text-sm text-gray-500 mb-2">Persentase Kehadiran</p><div class="flex items-center gap-4"><div class="flex-1 h-4 bg-orange-100 rounded-full overflow-hidden"><div id="attendanceBar" class="progress-bar h-full rounded-full" style="width: 0%"></div></div><span id="attendancePercent" class="text-lg font-bold text-orange-600">0%</span></div></div>
+                        <div><p class="text-sm text-gray-500 mb-2">Total Ustadz Terdaftar</p><p class="text-3xl font-bold text-orange-500" id="totalUstadz">0</p></div>
+                    </div>
+                </div>
+                <div class="glass-card rounded-2xl p-6"><h2 class="font-amiri text-xl font-bold text-orange-600 mb-4">Akses Cepat Kelas</h2><div id="quickClassGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3"></div></div>
+            </section>
+
+            <!-- Presensi Section -->
+            <section id="section-presensi" class="hidden space-y-6">
+                <div class="glass-card rounded-2xl p-6">
+                    <h2 class="font-amiri text-xl font-bold text-orange-600 mb-4">Input Presensi Harian</h2>
+                    <div class="grid md:grid-cols-4 gap-4 mb-6">
+                        <div><label class="text-sm text-gray-600 block mb-2">Tanggal</label><input type="date" id="presensiDate" class="w-full rounded-lg px-4 py-2 border-orange-200"></div>
+                        <div><label class="text-sm text-gray-600 block mb-2">Hari</label><select id="presensiDay" onchange="updateHoursDropdown(); loadPresensiTable()" class="w-full rounded-lg px-4 py-2 border-orange-200"><option value="Senin">Senin</option><option value="Selasa">Selasa</option><option value="Rabu">Rabu</option><option value="Kamis">Kamis</option><option value="Jumat">Jumat</option></select></div>
+                        <div><label class="text-sm text-gray-600 block mb-2">Jam ke-</label><select id="presensiHour" onchange="loadPresensiTable()" class="w-full rounded-lg px-4 py-2 border-orange-200"></select></div>
+                        <div><label class="text-sm text-gray-600 block mb-2">Kelas</label><select id="presensiClassSelect" onchange="loadPresensiTable()" class="w-full rounded-lg px-4 py-2 border-orange-200"><option value="">Pilih Kelas</option></select></div>
+                    </div>
+                    <div id="presensiTableContainer" class="overflow-x-auto scrollbar-custom rounded-xl border border-orange-100 min-h-[200px]"><p class="text-gray-400 text-center py-8">Pilih kelas untuk menampilkan data ustadz</p></div>
+                    <div class="mt-6 flex flex-wrap gap-3">
+                        <button onclick="savePresensi()" class="btn-primary px-6 py-2 rounded-lg font-medium flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Simpan ke Cloud</button>
+                        <button onclick="setAllStatus('hadir')" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition">Semua Hadir</button>
+                        <button onclick="resetPresensi()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm transition">Reset</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Ustadz Section -->
+            <section id="section-ustadz" class="hidden space-y-6">
+                <div class="glass-card rounded-2xl p-6">
+                    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+                        <h2 class="font-amiri text-xl font-bold text-orange-600">Data Ustadz</h2>
+                        <div class="flex flex-wrap gap-3">
+                            <button onclick="showAddUstadzModal()" class="btn-primary px-4 py-2 rounded-lg text-sm flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>Tambah Ustadz</button>
+                            <label class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm cursor-pointer transition">Import Excel<input type="file" accept=".xlsx,.xls" onchange="importExcel(event)" class="hidden"></label>
+                        </div>
+                    </div>
+                    <div class="mb-4 grid md:grid-cols-4 gap-4">
+                        <input type="text" id="searchUstadz" onkeyup="filterUstadz()" placeholder="Cari nama ustadz..." class="rounded-lg px-4 py-2 border-orange-200 md:col-span-2">
+                        <select id="filterHariUstadz" onchange="filterUstadz()" class="rounded-lg px-4 py-2 border-orange-200"><option value="">Semua Hari</option><option value="Senin">Senin</option><option value="Selasa">Selasa</option><option value="Rabu">Rabu</option><option value="Kamis">Kamis</option><option value="Jumat">Jumat</option></select>
+                        <select id="filterKelasUstadz" onchange="filterUstadz()" class="rounded-lg px-4 py-2 border-orange-200"><option value="">Semua Kelas</option></select>
+                    </div>
+                    <div id="ustadzTableContainer" class="overflow-x-auto scrollbar-custom rounded-xl border border-orange-100">
+                        <table class="w-full text-sm"><thead class="bg-orange-50"><tr class="border-b border-orange-200"><th class="text-left py-3 px-4 text-orange-700 font-semibold">No</th><th class="text-left py-3 px-4 text-orange-700 font-semibold">Nama Ustadz</th><th class="text-left py-3 px-4 text-orange-700 font-semibold">Jadwal Mengajar</th><th class="text-center py-3 px-4 text-orange-700 font-semibold">Aksi</th></tr></thead><tbody id="ustadzTableBody"></tbody></table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Rekap Section -->
+            <section id="section-rekap" class="hidden space-y-6">
+                <div class="glass-card rounded-2xl p-6">
+                    <h2 class="font-amiri text-xl font-bold text-orange-600 mb-4">Rekap Presensi</h2>
+                    <div class="grid md:grid-cols-5 gap-4 mb-6">
+                        <div><label class="text-sm text-gray-600 block mb-2">Periode</label><select id="rekapPeriod" onchange="toggleCustomDate()" class="w-full rounded-lg px-4 py-2 border-orange-200"><option value="weekly">Mingguan</option><option value="monthly">Bulanan</option><option value="custom">Custom</option></select></div>
+                        <div id="customDateStart" class="hidden"><label class="text-sm text-gray-600 block mb-2">Tanggal Mulai</label><input type="date" id="rekapStartDate" class="w-full rounded-lg px-4 py-2 border-orange-200"></div>
+                        <div id="customDateEnd" class="hidden"><label class="text-sm text-gray-600 block mb-2">Tanggal Akhir</label><input type="date" id="rekapEndDate" class="w-full rounded-lg px-4 py-2 border-orange-200"></div>
+                        <div><label class="text-sm text-gray-600 block mb-2">Kelas</label><select id="rekapClassSelect" class="w-full rounded-lg px-4 py-2 border-orange-200"><option value="">Semua Kelas</option></select></div>
+                        <div class="flex items-end"><button onclick="generateRekap()" class="btn-primary w-full px-4 py-2 rounded-lg font-medium">Generate</button></div>
+                    </div>
+                    <div id="rekapResult" class="space-y-4"><p class="text-gray-400 text-center py-8">Pilih periode dan klik Generate</p></div>
+                    <div id="exportSection" class="hidden mt-6"><button onclick="exportToExcel()" class="btn-secondary px-6 py-2 rounded-lg font-medium">Export ke Excel</button></div>
+                </div>
+            </section>
+
+            <!-- Pengaturan Section -->
+            <section id="section-pengaturan" class="hidden space-y-6">
+                <div class="glass-card rounded-2xl p-6 border-2 border-blue-200 bg-blue-50/30">
+                    <h2 class="font-amiri text-xl font-bold text-blue-700">Penyimpanan Google Cloud</h2>
+                    <p class="text-xs text-gray-600 mt-1 mb-4">Data tersimpan aman di Firebase. Akses dari manapun setelah login.</p>
+                    <div class="flex items-center gap-2 text-green-600 font-medium"><div class="w-3 h-3 bg-green-500 rounded-full pulse-dot"></div><span>Terhubung ke Cloud</span></div>
+                </div>
+                <div class="glass-card rounded-2xl p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="font-amiri text-xl font-bold text-orange-600">Pengaturan Nama Kelas</h2>
+                        <button onclick="saveClassSettings()" class="btn-primary px-4 py-2 rounded-lg text-sm">Simpan</button>
+                    </div>
+                    <div id="classSettingsContainer" class="space-y-4"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="addUstadzModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+        <div class="modal-overlay absolute inset-0" onclick="closeModal('addUstadzModal')"></div>
+        <div class="glass-card rounded-2xl p-6 w-full max-w-lg relative z-10 slide-up shadow-2xl max-h-[90vh] overflow-y-auto">
+            <h3 class="font-amiri text-xl font-bold text-orange-600 mb-4" id="modalTitle">Tambah Ustadz</h3>
+            <form id="ustadzForm" onsubmit="saveUstadz(event)" class="space-y-4">
+                <input type="hidden" id="editUstadzId">
+                <div><label class="text-sm text-gray-600 block mb-2">Nama Ustadz</label><input type="text" id="ustadzName" required class="w-full rounded-lg px-4 py-2 border-orange-200" placeholder="Nama lengkap"></div>
+                <div class="border border-dashed border-orange-300 rounded-xl p-4 bg-orange-50/30">
+                    <label class="text-sm font-semibold text-orange-700 block mb-3">Jadwal Mengajar</label>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                        <select id="schKelas" class="rounded-lg px-3 py-2 text-sm border-orange-200 bg-white"><option value="">Pilih Kelas</option></select>
+                        <select id="schHari" class="rounded-lg px-3 py-2 text-sm border-orange-200 bg-white"><option value="">Pilih Hari</option><option value="Senin">Senin</option><option value="Selasa">Selasa</option><option value="Rabu">Rabu</option><option value="Kamis">Kamis</option><option value="Jumat">Jumat</option></select>
+                        <select id="schJam" class="rounded-lg px-3 py-2 text-sm border-orange-200 bg-white"><option value="">Pilih Jam</option><option value="1">Jam 1</option><option value="2">Jam 2</option><option value="3">Jam 3</option><option value="4">Jam 4</option><option value="5">Jam 5</option><option value="6">Jam 6</option><option value="7">Jam 7</option><option value="8">Jam 8</option></select>
+                    </div>
+                    <button type="button" onclick="addScheduleItem()" class="w-full btn-secondary py-2 rounded-lg text-sm font-semibold">+ Tambah Jadwal</button>
+                </div>
+                <div><label class="text-sm text-gray-600 block mb-2">Jadwal Terpilih:</label><div id="scheduleListContainer" class="flex flex-wrap gap-2 min-h-[40px] p-3 border border-orange-100 rounded-lg bg-white"><p class="text-gray-400 text-xs italic">Belum ada jadwal</p></div></div>
+                <div class="flex gap-3 mt-6"><button type="submit" class="btn-primary flex-1 py-2 rounded-lg font-medium">Simpan</button><button type="button" onclick="closeModal('addUstadzModal')" class="bg-gray-200 flex-1 py-2 rounded-lg font-medium">Batal</button></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-4 right-4 z-50 transform translate-y-full opacity-0 transition-all duration-300">
+        <div class="glass-card rounded-lg px-6 py-3 flex items-center gap-3 shadow-lg border-l-4 border-orange-500">
+            <span id="toastMessage" class="text-sm font-medium text-gray-700">Berhasil!</span>
+        </div>
+    </div>
+
+    <script>
+        // ================= KONFIGURASI FIREBASE =================
+        // PENTING: Ganti dengan konfigurasi Anda. Buka Firebase Console -> Project Settings.
+        const firebaseConfig = {
+            apiKey: "API_KEY_ANDA",
+            authDomain: "PROJECT_ID.firebaseapp.com",
+            projectId: "PROJECT_ID",
+            storageBucket: "PROJECT_ID.appspot.com",
+            messagingSenderId: "SENDER_ID",
+            appId: "APP_ID"
+        };
+
+        // Inisialisasi Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Variabel Global
+        const DEFAULT_CLASSES = { 'Kelas 1': ['SANA\'A', 'TARIM', 'ADEN'], 'Kelas 2': ['KARIO', 'ALEXANDRIA'], 'Kelas 3': ['INSTANBUL', 'ANKARA'], 'Kelas 4': ['AMMAN', 'ZARQA'], 'Kelas 5': ['BAGHDAD'], 'Kelas 6': ['MAKKAH', 'MADINAH'] };
+        let classConfig = {}, ustadzList = [], presensiData = {}, currentRekapData = [], currentScheduleList = [], currentUser = null, unsubscribers = []; 
+
+        // ================= AUTENTIKASI =================
+        auth.onAuthStateChanged(user => {
+            const overlay = document.getElementById('loadingOverlay');
+            if (user) {
+                currentUser = user;
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('userInfo').classList.remove('hidden'); document.getElementById('userInfo').classList.add('flex');
+                document.getElementById('userName').innerText = user.displayName;
+                document.getElementById('userPhoto').src = user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName}`;
+                initApp();
+            } else {
+                currentUser = null; unsubscribers.forEach(u => u()); unsubscribers = [];
+                document.getElementById('loginScreen').classList.remove('hidden'); document.getElementById('userInfo').classList.add('hidden');
+                overlay.style.display = 'none';
+            }
+        });
+        function loginWithGoogle() { const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).catch(e => alert(e.message)); }
+        function logout() { auth.signOut(); }
+
+        // ================= LOGIC APP =================
+        function initApp() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            updateCurrentDate();
+            db.collection('users').doc(currentUser.uid).collection('settings').doc('classes').get().then(d => { classConfig = d.exists ? d.data() : JSON.parse(JSON.stringify(DEFAULT_CLASSES)); populateDropdowns(); renderClassSettings(); });
+            const u = db.collection('users').doc(currentUser.uid).collection('ustadz').onSnapshot(s => { ustadzList = s.docs.map(d => ({id: d.id, ...d.data()})); renderUstadzTable(); updateDashboard(); });
+            const p = db.collection('users').doc(currentUser.uid).collection('presensi').onSnapshot(s => { presensiData = {}; s.docs.forEach(d => presensiData[d.id]=d.data()); updateDashboard(); loadPresensiTable(); document.getElementById('loadingOverlay').style.display = 'none'; });
+            unsubscribers.push(u, p);
+        }
+        function updateCurrentDate() { document.getElementById('currentDate').textContent = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }); }
+        
+        function populateDropdowns() {
+            ['dashboardClassFilter', 'presensiClassSelect', 'filterKelasUstadz', 'rekapClassSelect', 'schKelas'].forEach(id => {
+                const s = document.getElementById(id); const f = s.options[0]; s.innerHTML = ''; if(f) s.appendChild(f);
+                Object.entries(classConfig).forEach(([g, c]) => { const og = document.createElement('optgroup'); og.label = g; c.forEach(k => { const o = document.createElement('option'); o.value=k; o.textContent=k; og.appendChild(o); }); s.appendChild(og); });
+            });
+            renderQuickClassGrid();
+        }
+        function renderQuickClassGrid() { document.getElementById('quickClassGrid').innerHTML = Object.values(classConfig).flat().map(c => `<button onclick="quickAccessClass('${c.replace(/'/g, "\\'")}')" class="class-card rounded-xl p-3 text-center border border-orange-200"><p class="font-medium text-sm text-orange-700">${c}</p></button>`).join(''); }
+        
+        function showSection(sec) { document.querySelectorAll('[id^="section-"]').forEach(el => el.classList.add('hidden')); document.getElementById('section-'+sec).classList.remove('hidden'); document.querySelectorAll('.nav-tab').forEach(t => { t.classList.remove('active'); if(t.dataset.section===sec) t.classList.add('active'); }); if(sec==='rekap') populateUstadzDropdown(); }
+        function updateDashboard() { const t = new Date().toISOString().split('T')[0]; const f = document.getElementById('dashboardClassFilter').value; let s = {hadir:0, izin:0, sakit:0, alpa:0}; Object.entries(presensiData).forEach(([k, c]) => { if(k.startsWith(t)) Object.entries(c).forEach(([cl, r]) => { if((f==='all'||f===cl) && r) Object.values(r).forEach(st => s[st]++); }); }); const tot = ustadzList.length; const ttl = s.hadir+s.izin+s.sakit+s.alpa; const p = ttl > 0 ? Math.round((s.hadir/ttl)*100) : 0; document.getElementById('statHadir').textContent=s.hadir; document.getElementById('statIzin').textContent=s.izin; document.getElementById('statSakit').textContent=s.sakit; document.getElementById('statAlpa').textContent=s.alpa; document.getElementById('attendanceBar').style.width=p+'%'; document.getElementById('attendancePercent').textContent=p+'%'; document.getElementById('totalUstadz').textContent=tot; }
+        
+        function loadPresensiTable() {
+            const c = document.getElementById('presensiClassSelect').value, d = document.getElementById('presensiDay').value, h = document.getElementById('presensiHour').value, container = document.getElementById('presensiTableContainer');
+            if(!c) { container.innerHTML = '<p class="text-center text-gray-400 py-8">Pilih Kelas</p>'; return; }
+            const list = ustadzList.filter(u => u.jadwal.some(j => j.kelas===c && j.hari===d && j.jam===h));
+            if(list.length===0) { container.innerHTML = '<p class="text-center text-gray-500 py-8">Tidak ada ustadz</p>'; return; }
+            const date = document.getElementById('presensiDate').value, key = `${date}_${d}_${h}`, saved = presensiData[key] ? presensiData[key][c] : {};
+            container.innerHTML = `<table class="w-full text-sm"><thead class="bg-orange-50"><tr><th class="p-2 text-left">No</th><th class="p-2 text-left">Nama</th><th class="p-2 text-center">Status</th></tr></thead><tbody>` +
+            list.map((u, i) => { const st = saved ? saved[u.id] : ''; return `<tr class="border-b"><td class="p-2">${i+1}</td><td class="p-2">${u.nama}</td><td class="p-2 text-center"><div class="flex justify-center gap-2 flex-wrap"><button onclick="setStatus('${u.id}','hadir')" class="attendance-btn ${st==='hadir'?'status-hadir active':'bg-gray-100'}" data-u="${u.id}">Hadir</button><button onclick="setStatus('${u.id}','izin')" class="attendance-btn ${st==='izin'?'status-izin active':'bg-gray-100'}" data-u="${u.id}">Izin</button><button onclick="setStatus('${u.id}','sakit')" class="attendance-btn ${st==='sakit'?'status-sakit active':'bg-gray-100'}" data-u="${u.id}">Sakit</button><button onclick="setStatus('${u.id}','alpa')" class="attendance-btn ${st==='alpa'?'status-alpa active':'bg-gray-100'}" data-u="${u.id}">Alpa</button></div></td></tr>`; }).join('') + '</tbody></table>';
+        }
+        function setStatus(id, s) { document.querySelectorAll(`[data-u="${id}"]`).forEach(b => { b.classList.remove('status-hadir','status-izin','status-sakit','status-alpa','active'); b.classList.add('bg-gray-100'); }); document.querySelector(`[data-u="${id}"][onclick*="'${s}'"]`).classList.remove('bg-gray-100'); document.querySelector(`[data-u="${id}"][onclick*="'${s}'"]`).classList.add(`status-${s}`, 'active'); }
+        function setAllStatus(s) { document.querySelectorAll('#presensiTableContainer .attendance-btn').forEach(b => { const u = b.getAttribute('data-u'); if(u) setStatus(u, s); }); }
+        async function savePresensi() { const c = document.getElementById('presensiClassSelect').value; if(!c) return; const d = document.getElementById('presensiDay').value, h = document.getElementById('presensiHour').value, date = document.getElementById('presensiDate').value, key = `${date}_${d}_${h}`; const list = ustadzList.filter(u => u.jadwal.some(j => j.kelas===c && j.hari===d && j.jam===h)); let data={}; list.forEach(u => { const b = document.querySelector(`[data-u="${u.id}"].active`); if(b) data[u.id] = b.textContent.toLowerCase(); }); await db.collection('users').doc(currentUser.uid).collection('presensi').doc(key).set({[c]: data}, {merge: true}); showToast('Tersimpan'); }
+        async function resetPresensi() { const c = document.getElementById('presensiClassSelect').value; if(!c) return; const d = document.getElementById('presensiDay').value, h = document.getElementById('presensiHour').value, date = document.getElementById('presensiDate').value, key = `${date}_${d}_${h}`; await db.collection('users').doc(currentUser.uid).collection('presensi').doc(key).set({[c]: firebase.firestore.FieldValue.delete()}, {merge: true}); loadPresensiTable(); showToast('Reset'); }
+
+        function renderUstadzTable() { const s = document.getElementById('searchUstadz').value.toLowerCase(), fH = document.getElementById('filterHariUstadz').value, fK = document.getElementById('filterKelasUstadz').value; const f = ustadzList.filter(u => u.nama.toLowerCase().includes(s) && (!fH || u.jadwal.some(j=>j.hari===fH)) && (!fK || u.jadwal.some(j=>j.kelas===fK))); document.getElementById('ustadzTableBody').innerHTML = f.length ? f.map((u,i) => `<tr class="border-b"><td class="p-2">${i+1}</td><td class="p-2">${u.nama}</td><td class="p-2 text-xs">${u.jadwal.map(j=>`<span class="bg-orange-100 text-orange-700 px-1 rounded mr-1">${j.kelas}</span>`).join('')}</td><td class="p-2 text-center"><button onclick="editUstadz('${u.id}')" class="text-blue-500">Edit</button> <button onclick="deleteUstadz('${u.id}')" class="text-red-500">Hapus</button></td></tr>`).join('') : '<tr><td colspan="4" class="text-center p-4">Kosong</td></tr>'; }
+        function filterUstadz() { renderUstadzTable(); }
+        function showAddUstadzModal() { document.getElementById('modalTitle').innerText='Tambah'; document.getElementById('editUstadzId').value=''; document.getElementById('ustadzForm').reset(); currentScheduleList=[]; renderScheduleList(); document.getElementById('addUstadzModal').classList.remove('hidden'); document.getElementById('addUstadzModal').classList.add('flex'); }
+        function editUstadz(id) { const u = ustadzList.find(x=>x.id===id); document.getElementById('modalTitle').innerText='Edit'; document.getElementById('editUstadzId').value=id; document.getElementById('ustadzName').value=u.nama; currentScheduleList=[...u.jadwal]; renderScheduleList(); document.getElementById('addUstadzModal').classList.remove('hidden'); document.getElementById('addUstadzModal').classList.add('flex'); }
+        async function saveUstadz(e) { e.preventDefault(); const id = document.getElementById('editUstadzId').value, nama = document.getElementById('ustadzName').value; const ref = db.collection('users').doc(currentUser.uid).collection('ustadz'); if(id) await ref.doc(id).update({nama, jadwal: currentScheduleList}); else await ref.add({nama, jadwal: currentScheduleList}); closeModal('addUstadzModal'); showToast('Simpan'); }
+        async function deleteUstadz(id) { if(confirm('Yakin?')) await db.collection('users').doc(currentUser.uid).collection('ustadz').doc(id).delete(); }
+        function addScheduleItem() { const k=document.getElementById('schKelas').value, h=document.getElementById('schHari').value, j=document.getElementById('schJam').value; if(!k||!h||!j) return; currentScheduleList.push({kelas:k, hari:h, jam:j}); renderScheduleList(); }
+        function renderScheduleList() { document.getElementById('scheduleListContainer').innerHTML = currentScheduleList.length ? currentScheduleList.map((j,i)=>`<span class="schedule-tag">${j.kelas} (${j.hari}-${j.jam})</span>`).join('') : '<p class="text-gray-400 text-xs">Belum ada</p>'; }
+
+        async function importExcel(e) { const file = e.target.files[0]; if(!file) return; const reader = new FileReader(); reader.onload = async (evt) => { const d = new Uint8Array(evt.target.result); const wb = XLSX.read(d, {type:'array'}); const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]); const batch = db.batch(); const ref = db.collection('users').doc(currentUser.uid).collection('ustadz'); json.forEach(r => { const n=r['Nama Ustadz']||r['nama'], k=r['Kelas']||r['kelas'], h=r['Hari']||r['hari'], j=String(r['Jam']||r['jam']); if(n&&k&&h&&j) batch.set(ref.doc(), {nama: String(n).trim(), jadwal:[{kelas:String(k).trim(), hari:String(h).trim(), jam:j}]}); }); await batch.commit(); showToast('Import sukses'); }; reader.readAsArrayBuffer(file); }
+        
+        function generateRekap() { const p=document.getElementById('rekapPeriod').value, cF=document.getElementById('rekapClassSelect').value; let sD, eD=new Date(); if(p==='custom') { sD=new Date(document.getElementById('rekapStartDate').value); eD=new Date(document.getElementById('rekapEndDate').value); } else { sD=new Date(); sD.setDate(sD.getDate()-7); } const map={}; Object.entries(presensiData).forEach(([k,cls]) => { const d=new Date(k.split('_')[0]); if(d>=sD && d<=eD) Object.entries(cls).forEach(([c,r]) => { if((!cF||cF===c) && r) Object.entries(r).forEach(([uId,st]) => { if(!map[uId]) { const u=ustadzList.find(x=>x.id===uId); map[uId]={nama:u?u.nama:'?', hadir:0, izin:0, sakit:0, alpa:0}; } map[uId][st]++; }); }); }); currentRekapData=Object.values(map); renderRekapResult(); }
+        function renderRekapResult() { const c=document.getElementById('rekapResult'); if(!currentRekapData.length) { c.innerHTML='<p class="text-center text-gray-400 py-8">Tidak ada data</p>'; return; } c.innerHTML = `<div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-orange-50"><tr><th class="p-2 text-left">Nama</th><th class="p-2 text-center">Hadir</th><th class="p-2 text-center">Izin</th><th class="p-2 text-center">Sakit</th><th class="p-2 text-center">Alpa</th></tr></thead><tbody>${currentRekapData.map(r=>`<tr class="border-b"><td class="p-2">${r.nama}</td><td class="p-2 text-center">${r.hadir}</td><td class="p-2 text-center">${r.izin}</td><td class="p-2 text-center">${r.sakit}</td><td class="p-2 text-center">${r.alpa}</td></tr>`).join('')}</tbody></table></div>`; document.getElementById('exportSection').classList.remove('hidden'); }
+        function exportToExcel() { if(!currentRekapData.length) return; const ws=XLSX.utils.json_to_sheet(currentRekapData); const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Rekap"); XLSX.writeFile(wb, "rekap.xlsx"); }
+        
+        function renderClassSettings() { document.getElementById('classSettingsContainer').innerHTML = Object.entries(classConfig).map(([g,cls])=>`<div class="p-3 border rounded-lg mb-2"><input value="${g}" class="font-bold text-orange-600 mb-2 border-b border-transparent focus:border-orange-400 outline-none w-full"> <div class="flex flex-wrap gap-2">${cls.map(c=>`<input value="${c}" class="rounded px-2 py-1 text-sm border-orange-200 w-24">`).join('')}</div></div>`).join(''); }
+        async function saveClassSettings() { const newConf={}; document.querySelectorAll('#classSettingsContainer > div').forEach(div => { const g=div.querySelector('input').value; const cls=Array.from(div.querySelectorAll('div input')).map(i=>i.value).filter(v=>v); if(g) newConf[g]=cls; }); classConfig=newConf; await db.collection('users').doc(currentUser.uid).collection('settings').doc('classes').set(classConfig); populateDropdowns(); showToast('Pengaturan disimpan'); }
+
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); document.getElementById(id).classList.remove('flex'); }
+        function updateHoursDropdown() { const d=document.getElementById('presensiDay').value; const h=document.getElementById('presensiHour'); const m = d==='Jumat'?6:8; h.innerHTML=''; for(let i=1;i<=m;i++) h.innerHTML+=`<option value="${i}">Jam ${i}</option>`; }
+        function quickAccessClass(c) { showSection('presensi'); document.getElementById('presensiClassSelect').value=c; loadPresensiTable(); }
+        function toggleCustomDate() { const p=document.getElementById('rekapPeriod').value; document.getElementById('customDateStart').classList.toggle('hidden', p!=='custom'); document.getElementById('customDateEnd').classList.toggle('hidden', p!=='custom'); }
+        function populateUstadzDropdown() { const s=document.getElementById('rekapUstadzSelect'); s.innerHTML='<option value="">Semua</option>'; ustadzList.forEach(u=>s.innerHTML+=`<option value="${u.id}">${u.nama}</option>`); }
+        function showToast(msg) { const t=document.getElementById('toast'); document.getElementById('toastMessage').textContent=msg; t.classList.remove('translate-y-full', 'opacity-0'); setTimeout(()=>t.classList.add('translate-y-full', 'opacity-0'), 3000); }
+    </script>
+</body>
+</html>
